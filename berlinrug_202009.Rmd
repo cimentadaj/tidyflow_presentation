@@ -27,7 +27,8 @@ class: inverse, center, middle
 
 ### cimentadaj.github.io/tidyflow
 ### @cimentadaj
-### `24th of September, 2020`
+### Slides: bit.ly/32XbnAs
+### 24th of September, 2020
 
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
