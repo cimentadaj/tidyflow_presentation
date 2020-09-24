@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>tidyflow: A simplified workflow for doing machine learning with tidymodels</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Jorge Cimentada" />
+    <meta name="date" content="2020-09-24" />
+    <script src="libs/header-attrs-2.2/header-attrs.js"></script>
+    <link rel="stylesheet" href="berlingrug_202009/xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+&lt;style type="text/css"&gt;
+code.r{
+  font-size: 14px;
+}
+&lt;/style&gt;
+
+---
+class: inverse, center, middle
+
+# tidyflow: A simplified workflow for doing machine learning with tidymodels
+
+### cimentadaj.github.io/tidyflow
+### @cimentadaj
+### `24th of September, 2020`
+
+
+
+
+
+
+
+---
+
+# tidymodels
+
+.pull-left[
+- &lt;https://www.tidymodels.org/&gt;
+
+- Rewrite of `caret`
+
+- Maturing (started circa 2017)
+
+- Created with a `'tidy'` philosophy in mind
+
+- Decouples caret into many packages:
+  * `recipes`
+  * `parsnip`
+  * `rsample`
+  * `yardstick`
+  * ...
+]
+
+.pull-right[
+
+&lt;img src="./berlingrug_202009/tidymodels_hex.png" width="35%" style="display: block; margin: auto;" /&gt;
+
+]
+
+---
+class: center, middle
+
+&lt;img src="./berlingrug_202009/yoda_fail.jpg" width="35%" style="display: block; margin: auto;" /&gt;
+**I tried it out but it was too difficult for me**
+
+&lt;https://bit.ly/303EVuh&gt;
+
+---
+
+# tidymodels
+
+.pull-left[
+&lt;img src="./berlingrug_202009/tidymodels_code.png" width="77%" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+
+* Data is repeated many times
+
+* Different fit functions (tune_*, fit, fit_resamples, etc..)
+
+* Non-linear workflow (workflow is defined after data, resampling, etc..)
+
+* Too many objects to remember (predict by mistake on test, which fit function to use, etc...)
+
+]
+
+---
+
+# tidyflow
+
+
+* &lt;https://cimentadaj.github.io/tidyflow/&gt;
+
+* `tidyflow` is a fork of `workflows` (`tidymodels`)
+
+* It aims to create a higher level extension to `tidymodels`
+
+* Bundles your data, splitting, resampling, preprocessing, modeling, and grid search in a single object.
+
+&lt;br&gt;
+&lt;br&gt;
+
+You can install the package from Github (and also `tidymodels`):
+
+
+```r
+install.packages("tidymodels")
+
+devtools::install_github("cimentadaj/tidyflow")
+```
+
+---
+
+# tidyflow
+
+&lt;img src="./berlingrug_202009/stages.svg" width="30%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# tidyflow
+
+&lt;img src="./berlingrug_202009/stages_arrows_plug_complete.svg" width="70%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# tidyflow
+
+&lt;img src="./berlingrug_202009/stages_arrows_plug_complete_code.svg" width="95%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# tidyflow
+
+
+
+
+```r
+library(tidymodels)
+library(tidyflow)
+
+tflow &lt;-
+  mtcars %&gt;%
+  tidyflow(seed = 5213) %&gt;%
+  plug_split(initial_split) %&gt;%
+  plug_formula(mpg ~ .) %&gt;%
+  plug_model(linear_reg() %&gt;% set_engine("lm"))
+
+tflow
+```
+
+```
+## ══ Tidyflow ════════════════════════════════════════════════════════════════════
+## Data: 32 rows x 11 columns
+## Split: initial_split w/ default args
+## Formula: mpg ~ .
+## Resample: None
+## Grid: None
+## Model:
+## Linear Regression Model Specification (regression)
+## 
+## Computational engine: lm
+```
+
+---
+
+# tidyflow
+
+
+```r
+res &lt;- fit(tflow)
+res
+```
+
+```
+## ══ Tidyflow [trained] ══════════════════════════════════════════════════════════
+## Data: 32 rows x 11 columns
+## Split: initial_split w/ default args
+## Formula: mpg ~ .
+## Resample: None
+## Grid: None
+## Model:
+## Linear Regression Model Specification (regression)
+## 
+## Computational engine: lm 
+## 
+## ══ Results ═════════════════════════════════════════════════════════════════════
+## 
+## 
+## Fitted model:
+## 
+## Call:
+## stats::lm(formula = ..y ~ ., data = data)
+## 
+## Coefficients:
+## 
+## ...
+## and 5 more lines.
+```
+
+---
+
+# tidyflow
+
+`tidyflow` leverages the power of `tidymodels` so we can continue to use the same infrastructure:
+
+* `plug_split`: a function to be applied to the data such as `initial_split`, etc...
+
+* `plug_formula`: the formula of the model definition. A tidyflow needs to specify either a formula or a recipe, but not both.
+
+* `plug_recipe`: a formula containing a recipe that will be applied to the training data.
+
+* `plug_resample`: a function to be applied to the preprocessed data such as `vfold_cv`, etc...
+
+* `plug_grid`: a function to be applied to the tuning placeholders in the recipe or the data such as `grid_regular`, etc...
+
+* `plug_model`: a model object such as `rand_forest`, etc...
+
+---
+
+# tidyflow
+
+Let's work out a more complicated example based on the initial `tidymodels` example. Let's begin a reproducible tidyflow with the data, the split and the seed:
+
+
+```r
+library(AmesHousing)
+library(tidymodels)
+library(tidyflow)
+
+ames &lt;- make_ames()
+tflow &lt;- ames %&gt;% tidyflow(seed = 52131) %&gt;% plug_split(initial_split)
+tflow
+```
+
+```
+## ══ Tidyflow ════════════════════════════════════════════════════════════════════
+## Data: 2.93K rows x 81 columns
+## Split: initial_split w/ default args
+## Recipe/Formula: None
+## Resample: None
+## Grid: None
+## Model: None
+```
+
+The `tidyflow` is currently only holding the data and the split.
+
+---
+
+# tidyflow
+
+The `tidyflow` currently knows that it has a data frame and it will work solely once the training data set. Let's add a few transformations to the data with a recipe:
+
+
+```r
+mod_rec &lt;-
+  ~ recipe(Sale_Price ~ Longitude + Latitude + Neighborhood, data = .x) %&gt;%
+    step_other(Neighborhood, threshold = 0.05) %&gt;%
+    step_dummy(all_nominal())
+
+tflow &lt;- tflow %&gt;% plug_recipe(mod_rec)
+tflow
+```
+
+```
+## ══ Tidyflow ════════════════════════════════════════════════════════════════════
+## Data: 2.93K rows x 81 columns
+## Split: initial_split w/ default args
+## Recipe: available
+## Resample: None
+## Grid: None
+## Model: None
+```
+
+---
+
+# tidyflow
+
+Let's run a regularized regression where we grid search through the `penalty` and `mixture` hyper-parameters:
+
+
+```r
+reg_mod &lt;- linear_reg(penalty = tune(), mixture = tune()) %&gt;% set_engine("glmnet")
+
+tflow &lt;- tflow %&gt;%
+  plug_resample(vfold_cv) %&gt;%
+  plug_model(reg_mod) %&gt;%
+  plug_grid(grid_regular, levels = 5)
+
+tflow
+```
+
+```
+## ══ Tidyflow ════════════════════════════════════════════════════════════════════
+## Data: 2.93K rows x 81 columns
+## Split: initial_split w/ default args
+## Recipe: available
+## Resample: vfold_cv w/ default args
+## Grid: grid_regular w/ levels = ~5
+## Model:
+## Linear Regression Model Specification (regression)
+## 
+## Main Arguments:
+##   penalty = tune()
+##   mixture = tune()
+## 
+## Computational engine: glmnet
+```
+
+---
+
+# tidyflow
+
+
+```r
+res &lt;- fit(tflow)
+```
+
+
+```
+## # Tuning results
+## # 10-fold cross-validation 
+## # A tibble: 10 x 4
+##    splits           id     .metrics          .notes          
+##    &lt;list&gt;           &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;          
+##  1 &lt;split [2K/220]&gt; Fold01 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  2 &lt;split [2K/220]&gt; Fold02 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  3 &lt;split [2K/220]&gt; Fold03 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  4 &lt;split [2K/220]&gt; Fold04 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  5 &lt;split [2K/220]&gt; Fold05 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  6 &lt;split [2K/220]&gt; Fold06 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  7 &lt;split [2K/220]&gt; Fold07 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  8 &lt;split [2K/220]&gt; Fold08 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+##  9 &lt;split [2K/219]&gt; Fold09 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+## 10 &lt;split [2K/219]&gt; Fold10 &lt;tibble [50 × 6]&gt; &lt;tibble [0 × 1]&gt;
+```
+
+---
+
+# tidyflow
+
+
+```r
+res %&gt;% pull_tflow_fit_tuning() %&gt;% autoplot() + facet_wrap(~ .metric, ncol = 2)
+```
+
+&lt;img src="berlinrug_202009_files/figure-html/unnamed-chunk-16-1.png" width="43%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# tidyflow
+We can allow `tidyflow` to find the best combination of parameters and quickly look at our metric of interest.
+
+
+```r
+final_mod &lt;- res %&gt;% complete_tflow(metric = "rmse")
+multi_metric &lt;- metric_set(rsq, rmse)
+
+final_mod %&gt;%
+  predict_testing() %&gt;%
+  multi_metric(Sale_Price, .pred)
+```
+
+```
+## # A tibble: 2 x 3
+##   .metric .estimator .estimate
+##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+## 1 rsq     standard       0.318
+## 2 rmse    standard   65599.
+```
+
+---
+
+# tidyflow
+
+Once you've fitted your `tidyflow`, you can begin extracting many of the separate parts:
+
+* `pull_tflow_rawdata()`
+* `pull_tflow_split()`
+* `pull_tflow_training()`
+* `pull_tflow_testing()`
+* `pull_tflow_resample()`
+* `pull_tflow_spec()`
+* `pull_tflow_fit()`
+* `pull_tflow_fit_tuning()`
+* ...
+
+---
+
+# tidyflow
+
+Resources:
+
+* Several vignettes showcasing detailed functionalities: &lt;https://cimentadaj.github.io/tidyflow/&gt;
+
+* My course notes 'Machine Learning for Social Scientists': &lt;https://cimentadaj.github.io/ml_socsci/&gt;
+
+* Source code. Looking for collaborations, features, bugs or new ideas: &lt;https://github.com/cimentadaj/tidyflow&gt;
+
+Road map:
+
+* Grid of models
+
+* `plug_metric` for evaluating custom metrics
+
+* Including custom options for additional `tune_*` executions (`tune_bayes`, etc...)
+
+---
+class: center, middle
+
+&gt; Thanks to RStudio for supporting open source work and the `tidymodels` team for such a fresh infrastructure for doing tidy machine learning in R.
+
+❤️
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
